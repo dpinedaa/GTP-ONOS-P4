@@ -1,9 +1,0 @@
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/cli/package-info.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/MainComponent.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/PacketInLogger.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/pipeconf/PipeconfLoader.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/AppConstants.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/common/FabricDeviceConfig.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/pipeconf/InterpreterImpl.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/pipeconf/PipelinerImpl.java
-/home/vm/app/src/main/java/co/edu/udea/gita/tutorial/common/Utils.java
