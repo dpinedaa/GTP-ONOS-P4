@@ -41,20 +41,8 @@ import org.onosproject.net.pi.runtime.PiCounterCellData;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.onosproject.net.pi.runtime.PiCounterCell;
 
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowEntry;
-import org.onosproject.net.flow.TableId;
 
 
-
-
-import co.edu.udea.gita.tutorial.common.Utils;
-import com.google.common.collect.Lists;
-import java.util.Collection;
 
 
 import java.nio.ByteBuffer;
@@ -62,8 +50,6 @@ import java.util.Arrays; // Import the Arrays class
 import java.util.Optional;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Iterator;
-
 
 
 
@@ -87,13 +73,6 @@ public class PacketInLogger {
 
     private List<PiCounterCell> counterCells = new ArrayList<>();
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected FlowRuleService flowRuleService;
-
-
-    private byte[] TunnelIDBytes;
-
-
 
 
 
@@ -104,8 +83,6 @@ public class PacketInLogger {
         TrafficSelector selector = DefaultTrafficSelector.emptySelector();
         packetService.requestPackets(selector, PacketPriority.REACTIVE, appId);
         log.info("Packet-in Logger Started");
-        
-
     }
 
     @Deactivate
@@ -117,9 +94,6 @@ public class PacketInLogger {
     private class PacketInProcessor implements PacketProcessor {
         @Override
         public void process(PacketContext context) {
-            String TunnelID = "";
-            DeviceId deviceId = context.inPacket().receivedFrom().deviceId();
-            log.info("Device ID: {}", deviceId);
             Ethernet eth = context.inPacket().parsed();
             ByteBuffer rawPacketData = context.inPacket().unparsed();
 
@@ -150,18 +124,17 @@ public class PacketInLogger {
                 log.info("Intercepted a packet-in: {}", byteArrayToHexString(rawDataBytes));
                 if (rawDataBytes.length >= 50) {
                 // Extract bytes 46 to 49 from the byte array
-                    TunnelIDBytes = Arrays.copyOfRange(rawDataBytes, 46, 50);
-                    TunnelID = "0x" + byteArrayToHexString(TunnelIDBytes);
+                    byte[] extractedBytes = Arrays.copyOfRange(rawDataBytes, 46, 50);
+                    String TunnelID = byteArrayToHexString(extractedBytes);
 
-                    log.info("Tunnel ID: {}", TunnelID);
+                    log.info("Tunnel ID: 0x{}", TunnelID);
 
                }
             }
 
-            printActiveFlows(deviceId);
             getIndirectCounter();
-            addGTPRule(deviceId,TunnelID, TunnelIDBytes,0);
-    
+            
+
         }
 
         // Helper method to convert a byte array to a hexadecimal string
@@ -202,16 +175,19 @@ public class PacketInLogger {
                 logTables(piPipeconf.pipelineModel());
             }
         }
+
+
         private void logTables(PiPipelineModel pipelineModel) {
             pipelineModel.tables().forEach(table -> {
                 log.info("\nDiana \n Table ID: {}\n\n", table.id());
-                log.info("\nDiana \n Table Name: {}\n\n", table);
                 // Add more logging for table details as needed
             });
         }
 
+
         private void logCounters(PiPipelineModel pipelineModel) {
             PiCounterId counterId = PiCounterId.of("IngressPipeImpl.tunnel_counter");
+
             //Get the counter that ID is gtp_tunnel_counter
             //PiCounterModel counter = pipelineModel.counter(new PiCounterId("gtp_tunnel_counter"));
             Optional<PiCounterModel> counterOptional = pipelineModel.counter(counterId);
@@ -227,6 +203,7 @@ public class PacketInLogger {
                         
             //Help me to use PiCounterCell using the Pi CounterModel counter based on this counter: P4CounterModel{id=IngressPipeImpl.tunnel_counter, counterType=INDIRECT, unit=PACKETS, table=null, size=30}
             
+
             // Iterate over the cells
             for (long cellIndex = 0; cellIndex < counterSize; cellIndex++) {
                 PiCounterCellId cellId = PiCounterCellId.ofIndirect(counter.id(), cellIndex);
@@ -234,61 +211,13 @@ public class PacketInLogger {
                 // Access the cell's data if needed
                 counterCells.add(cell);
                 PiCounterCellData cellData = cell.data();
-                //log.info("\nDiana \n Cell Data: {}\n\n", cellData);
                 long packets = cellData.packets();
                 long bytes = cellData.bytes();
-                //log.info("\nDiana \n Cell ID:{} \n Packets:{} \n Bytes:{}\n\n", cellId, packets, bytes);
+                log.info("\nDiana \n Cell ID:{} \n Packets:{} \n Bytes:{}\n\n", cellId, packets, bytes);
             }
+            
         }
 
-
-        private void addGTPRule(DeviceId deviceId, String TunnelID, byte[] TunnelIDBytes, int index) {
-            log.info("Hi Diana. \n\n I'm the addGTPRule method in the PacketInLogger class");
-            log.info("Tunnel ID: {}", TunnelID);
-        
-            // Create a PiCriterion to match on hdr.gtp.teid with TunnelID
-            final PiCriterion gtpTunnelCriterion = PiCriterion.builder()
-                    .matchExact(PiMatchFieldId.of("hdr.gtp.teid"), TunnelIDBytes)
-                    .build();
-        
-            log.info("gtpTunnelCriterion: {}", gtpTunnelCriterion);
-        
-            // Create a PiAction to apply the "track_tunnel" action
-            final PiAction trackTunnelAction = PiAction.builder()
-                    .withId(PiActionId.of("IngressPipeImpl.track_tunnel"))
-                    .withParameter(new PiActionParam(PiActionParamId.of("index"), 0))
-                    .build();
-                        
-                    
-        
-            // Build the FlowRule with the specified index
-            // Replace this line in PacketInLogger with the following line
-            final FlowRule rule = Utils.buildFlowRule(deviceId, appId, "IngressPipeImpl.gtp_tunnel", gtpTunnelCriterion, trackTunnelAction);
-
-        
-            // Insert the FlowRule
-            flowRuleService.applyFlowRules(rule);
-        }
-
-
-        private void printActiveFlows(DeviceId deviceId) {
-            // Get all flow entries for the specified device
-            Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
-    
-            log.info("Active flows in the 'IngressPipeImpl.gtp_tunnel' table:");
-            for (FlowEntry flowEntry : flowEntries) {
-
-                //log.info("Flow Entry: {}", flowEntry);
-                log.info("Flow Entry Table ID: {}", flowEntry.tableId());
-
-                log.info("\nDiana\n Flow Entry Table ID: {}. Flow Entry ID {}. Flow Entry Selector {} Flow Number of packets: {} Flow Number of bytes: {}\n\n", flowEntry.tableId(), flowEntry.id(), flowEntry.selector(), flowEntry.packets(), flowEntry.bytes());
-
-                // Check if the flow entry is in the desired table
-                
-            }
-        }
-    
-        
         
         
     }

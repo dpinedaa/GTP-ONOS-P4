@@ -3,80 +3,26 @@ pkg_info {
 }
 tables {
   preamble {
-    id: 45130464
-    name: "IngressPipeImpl.gtp_check"
-    alias: "gtp_check"
+    id: 34391805
+    name: "IngressPipeImpl.l2_exact_table"
+    alias: "l2_exact_table"
   }
   match_fields {
     id: 1
-    name: "hdr.udp.dstPort"
-    bitwidth: 16
-    match_type: EXACT
-  }
-  match_fields {
-    id: 2
-    name: "hdr.udp.srcPort"
-    bitwidth: 16
+    name: "hdr.ethernet.dst_addr"
+    bitwidth: 48
     match_type: EXACT
   }
   action_refs {
-    id: 24930896
-  }
-  action_refs {
-    id: 21257015
-    annotations: "@defaultonly"
-    scope: DEFAULT_ONLY
-  }
-  direct_resource_ids: 325102167
-  size: 1024
-  is_const_table: true
-}
-tables {
-  preamble {
-    id: 34995211
-    name: "IngressPipeImpl.ipv4_check"
-    alias: "ipv4_check"
-  }
-  match_fields {
-    id: 1
-    name: "hdr.ipv4.dst_addr"
-    bitwidth: 32
-    match_type: EXACT
+    id: 24677122
   }
   action_refs {
     id: 28396054
-  }
-  action_refs {
-    id: 18299257
-  }
-  direct_resource_ids: 329421252
-  size: 1024
-  is_const_table: true
-}
-tables {
-  preamble {
-    id: 49030376
-    name: "IngressPipeImpl.gtp_tunnel"
-    alias: "gtp_tunnel"
-  }
-  match_fields {
-    id: 1
-    name: "hdr.gtp.teid"
-    bitwidth: 32
-    match_type: EXACT
-  }
-  action_refs {
-    id: 28396054
-  }
-  action_refs {
-    id: 27048890
-  }
-  action_refs {
-    id: 21257015
     annotations: "@defaultonly"
     scope: DEFAULT_ONLY
   }
-  direct_resource_ids: 326935515
+  const_default_action_id: 28396054
+  direct_resource_ids: 334804396
   size: 1024
 }
 tables {
@@ -118,7 +64,32 @@ tables {
   action_refs {
     id: 28396054
   }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
   direct_resource_ids: 332339774
+  size: 1024
+}
+tables {
+  preamble {
+    id: 34492712
+    name: "IngressPipeImpl.arp_exact"
+    alias: "arp_exact"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.arp.dst_ip"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24098423
+  }
+  action_refs {
+    id: 28396054
+  }
   size: 1024
 }
 actions {
@@ -131,13 +102,6 @@ actions {
 }
 actions {
   preamble {
-    id: 24930896
-    name: "IngressPipeImpl.set_gtp"
-    alias: "set_gtp"
-  }
-}
-actions {
-  preamble {
     id: 28396054
     name: "IngressPipeImpl.drop"
     alias: "drop"
@@ -145,26 +109,14 @@ actions {
 }
 actions {
   preamble {
-    id: 18299257
-    name: "IngressPipeImpl.send_to_port"
-    alias: "send_to_port"
+    id: 24677122
+    name: "IngressPipeImpl.set_egress_port"
+    alias: "set_egress_port"
   }
   params {
     id: 1
     name: "port_num"
     bitwidth: 9
-  }
-}
-actions {
-  preamble {
-    id: 27048890
-    name: "IngressPipeImpl.track_tunnel"
-    alias: "track_tunnel"
-  }
-  params {
-    id: 1
-    name: "index"
-    bitwidth: 32
   }
 }
 actions {
@@ -181,49 +133,28 @@ actions {
     alias: "clone_to_cpu"
   }
 }
-counters {
+actions {
   preamble {
-    id: 308062519
-    name: "IngressPipeImpl.tunnel_counter"
-    alias: "tunnel_counter"
+    id: 24098423
+    name: "IngressPipeImpl.arp_reply"
+    alias: "arp_reply"
   }
-  spec {
-    unit: PACKETS
+  params {
+    id: 1
+    name: "request_mac"
+    bitwidth: 48
   }
-  size: 30
 }
 direct_counters {
   preamble {
-    id: 325102167
-    name: "gtp_check_counter"
-    alias: "gtp_check_counter"
+    id: 334804396
+    name: "l2_exact_table_counter"
+    alias: "l2_exact_table_counter"
   }
   spec {
     unit: BOTH
   }
-  direct_table_id: 45130464
-}
-direct_counters {
-  preamble {
-    id: 329421252
-    name: "ipv4_check_counter"
-    alias: "ipv4_check_counter"
-  }
-  spec {
-    unit: BOTH
-  }
-  direct_table_id: 34995211
-}
-direct_counters {
-  preamble {
-    id: 326935515
-    name: "gtp_tunnel_counter"
-    alias: "gtp_tunnel_counter"
-  }
-  spec {
-    unit: BOTH
-  }
-  direct_table_id: 49030376
+  direct_table_id: 34391805
 }
 direct_counters {
   preamble {
