@@ -37,8 +37,6 @@ import org.slf4j.LoggerFactory;
 import java.net.URL;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.Optional;
-
 
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.BMV2_JSON;
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.P4_INFO_TEXT;
@@ -52,8 +50,8 @@ public final class PipeconfLoader {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private static final String P4INFO_PATH = "/gtp-stratum.p4info.txt";
-    private static final String BMV2_JSON_PATH = "/gtp-stratum.json";
+    private static final String P4INFO_PATH = "/sw_gita.p4info.txt";
+    private static final String BMV2_JSON_PATH = "/sw_gita.json";
 
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -64,30 +62,18 @@ public final class PipeconfLoader {
 
     @Activate
     public void activate() {
-        log.info("Hi Diana\n\n, I'm the activate method in the PipeconfLoader class");
         // Registers the pipeconf at component activation.
-        log.info("Registers the pipeconf at component activation.");
-        log.info("Pipeconfig ID: {}", PIPECONF_ID);
-
-
         if (pipeconfService.getPipeconf(PIPECONF_ID).isPresent()) {
-            log.info("Diaana \n\n Pipeconf {} already registered, removing...", PIPECONF_ID);
             // Remove first if already registered, to support reloading of the
             // pipeconf during the tutorial.
             pipeconfService.unregister(PIPECONF_ID);
         }
         removePipeconfDrivers();
         try {
-            PiPipeconf registeredPipeconf = buildPipeconf();
-            pipeconfService.register(registeredPipeconf);
-            log.info("Diana \n\n Pipeconf {} registered successfully", registeredPipeconf.id());
+            pipeconfService.register(buildPipeconf());
         } catch (P4InfoParserException e) {
             log.error("Unable to register " + PIPECONF_ID, e);
         }
-
-        getPipedetails();
-        
-
     }
 
     @Deactivate
@@ -96,18 +82,11 @@ public final class PipeconfLoader {
     }
 
     private PiPipeconf buildPipeconf() throws P4InfoParserException {
-        log.info("Hi Diana\n\n, I'm the buildPipeconf method in the PipeconfLoader class");
 
         final URL p4InfoUrl = PipeconfLoader.class.getResource(P4INFO_PATH);
         final URL bmv2JsonUrlUrl = PipeconfLoader.class.getResource(BMV2_JSON_PATH);
         final PiPipelineModel pipelineModel = P4InfoParser.parse(p4InfoUrl);
 
-        log.info("Diana \np4InfoUrl: {}", p4InfoUrl);
-        log.info("Diana \n bmv2JsonUrlUrl: {}", bmv2JsonUrlUrl);
-        log.info("Diana \n pipelineModel: {}", pipelineModel);
-
-        log.info("returning DefaultPiPipeconf.builder()");
-        
         return DefaultPiPipeconf.builder()
                 .withId(PIPECONF_ID)
                 .withPipelineModel(pipelineModel)
@@ -119,16 +98,11 @@ public final class PipeconfLoader {
     }
 
     private void removePipeconfDrivers() {
-        log.info("Hi Diana \n\n . I'm the removePipeconfDrivers method in the PipeconfLoader class");
-
-
         List<DriverProvider> driverProvidersToRemove = driverAdminService
                 .getProviders().stream()
                 .filter(p -> p.getDrivers().stream()
                         .anyMatch(d -> d.name().endsWith(PIPECONF_ID.id())))
                 .collect(Collectors.toList());
-        
-        log.info("Diana \n\n driverProvidersToRemove: {}", driverProvidersToRemove);
 
         if (driverProvidersToRemove.isEmpty()) {
             return;
@@ -139,55 +113,4 @@ public final class PipeconfLoader {
 
         driverProvidersToRemove.forEach(driverAdminService::unregisterProvider);
     }
-
-    private void getPipedetails() {
-        log.info("Hi Diana. \n\n I'm the getPipedetails method in the PipeconfLoader class");
-        
-        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(PIPECONF_ID);
-        
-        if (pipeconf.isPresent()) {
-            PiPipeconf piPipeconf = pipeconf.get();
-            log.info("Diana \n\n PiPipeconf ID: {}", piPipeconf.id());
-    
-            // Access other details of the pipeline model as needed
-            logActionProfiles(piPipeconf.pipelineModel());
-            logCounters(piPipeconf.pipelineModel());
-            logMeters(piPipeconf.pipelineModel());
-            logTables(piPipeconf.pipelineModel());
-            // You can add similar log statements for other pipeline components
-    
-        } else {
-            log.warn("Diana \n\n PiPipeconf not found for ID: {}", PIPECONF_ID);
-        }
-    }
-    
-    // Helper methods to log details of different pipeline components
-    private void logActionProfiles(PiPipelineModel pipelineModel) {
-        pipelineModel.actionProfiles().forEach(actionProfile -> {
-            log.info("Diana \n\n Action Profile ID: {}", actionProfile.id());
-            // Add more logging for action profile details as needed
-        });
-    }
-    
-    private void logCounters(PiPipelineModel pipelineModel) {
-        pipelineModel.counters().forEach(counter -> {
-            log.info("Diana \n\n Counter ID: {}", counter.id());
-            // Add more logging for counter details as needed
-        });
-    }
-    
-    private void logMeters(PiPipelineModel pipelineModel) {
-        pipelineModel.meters().forEach(meter -> {
-            log.info("Diana \n\n Meter ID: {}", meter.id());
-            // Add more logging for meter details as needed
-        });
-    }
-    
-    private void logTables(PiPipelineModel pipelineModel) {
-        pipelineModel.tables().forEach(table -> {
-            log.info("Diana \n\n Table ID: {}", table.id());
-            // Add more logging for table details as needed
-        });
-    }
-    
 }

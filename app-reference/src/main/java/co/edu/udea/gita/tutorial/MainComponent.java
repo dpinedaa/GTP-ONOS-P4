@@ -85,11 +85,7 @@ public class MainComponent {
 
     @Activate
     protected void activate() {
-        log.info("Hi Diana, this is my first log message. I'm in the activate method");
         appId = coreService.registerApplication(APP_NAME);
-        log.info("Diana appId = {}", appId.id());
-        log.info("Diana APP_NAME = {}", APP_NAME);
-
 
         // Wait to remove flow and groups from previous executions.
         waitPreviousCleanup();
@@ -154,31 +150,18 @@ public class MainComponent {
      * @return false if no flows or groups were found, true otherwise
      */
     private boolean cleanUp() {
-        log.info("Hi Diana, I'm in the cleanUp method");
         Collection<FlowRule> flows = Lists.newArrayList(
                 flowRuleService.getFlowEntriesById(appId).iterator());
-        log.info("Diana flows = {}", flows);
-
 
         Collection<Group> groups = Lists.newArrayList();
-
-        log.info("Diana Groups = {}", groups);
-
-
-        log.info("Diana deviceService.getAvailableDevices() = {}", deviceService.getAvailableDevices());
-
         for (Device device : deviceService.getAvailableDevices()) {
-            log.info("Diana device = {}", device);
             groupService.getGroups(device.id(), appId).forEach(groups::add);
-            log.info("Diana groupService.getGroups(device.id(), appId) = {}", groupService.getGroups(device.id(), appId));
         }
 
         if (flows.isEmpty() && groups.isEmpty()) {
             return false;
         }
 
-        log.info("Diana flows.forEach(flowRuleService::removeFlowRules)") ;
-        
         flows.forEach(flowRuleService::removeFlowRules);
         if (!groups.isEmpty()) {
             // Wait for flows to be removed in case those depend on groups.
@@ -191,9 +174,7 @@ public class MainComponent {
     }
 
     private void waitPreviousCleanup() {
-        log.info("Hi Diana, I'm in the waitPreviousCleanup method");
         int retry = DEFAULT_CLEAN_UP_RETRY_TIMES;
-        log.info("Diana retry = {}", retry);
         while (retry != 0) {
 
             if (!cleanUp()) {
