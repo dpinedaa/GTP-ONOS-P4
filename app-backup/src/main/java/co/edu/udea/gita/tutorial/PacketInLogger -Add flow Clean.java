@@ -182,37 +182,39 @@ public class PacketInLogger {
 
        
 
-        private void addGTPRule(DeviceId deviceId, byte[] TunnelIDBytes, int index) {
+        private void addGTPRule(DeviceId deviceId, String TunnelID, byte[] TunnelIDBytes, int index) {
             log.info("Hi Diana. \n\n I'm the addGTPRule method in the PacketInLogger class");
-
+            log.info("Tunnel ID: {}", TunnelID);
+        
             // Create a PiCriterion to match on hdr.gtp.teid with TunnelID
             final PiCriterion gtpTunnelCriterion = PiCriterion.builder()
                     .matchExact(PiMatchFieldId.of("hdr.gtp.teid"), TunnelIDBytes)
                     .build();
-            
+        
             log.info("gtpTunnelCriterion: {}", gtpTunnelCriterion);
-
+        
+            // Create a PiAction based on the TunnelIDBytes
+            final PiAction trackTunnelAction;
             if (Arrays.equals(TunnelIDBytes, new byte[]{0x00, 0x00, 0x00, 0x06})) {
-                 // Create a PiAction to apply the "track_tunnel" action
-                final PiAction trackTunnelAction = PiAction.builder()
-                .withId(PiActionId.of("IngressPipeImpl.drop"))
-                .build();
-            }
-
-            else{
-                 // Create a PiAction to apply the "track_tunnel" action
-                final PiAction trackTunnelAction = PiAction.builder()
-                .withId(PiActionId.of("IngressPipeImpl.track_tunnel"))
-                .withParameter(new PiActionParam(PiActionParamId.of("index"), 0))
-                .build();
+                // If TunnelIDBytes is 0x00000006, create a PiAction to drop
+                trackTunnelAction = PiAction.builder()
+                        .withId(PiActionId.of("IngressPipeImpl.drop"))
+                        .build();
+            } else {
+                // Otherwise, create a PiAction to apply the "track_tunnel" action
+                trackTunnelAction = PiAction.builder()
+                        .withId(PiActionId.of("IngressPipeImpl.track_tunnel"))
+                        .withParameter(new PiActionParam(PiActionParamId.of("index"), 0))
+                        .build();
             }
         
+            // Build the FlowRule with the specified index
             final FlowRule rule = Utils.buildFlowRule(deviceId, appId, "IngressPipeImpl.gtp_tunnel", gtpTunnelCriterion, trackTunnelAction);
+            
             // Insert the FlowRule
             flowRuleService.applyFlowRules(rule);
+        }
         
-        
-    }
 
     private class PrintActiveFlowsTask extends TimerTask {
         private final DeviceId deviceId;
