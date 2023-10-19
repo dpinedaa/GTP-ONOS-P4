@@ -78,7 +78,7 @@ import java.util.HashMap;
 
 @Component(immediate = true)
 public class PacketInLogger {
-    List<FlowRule> flowRulesList = new ArrayList<>();
+
     List<FlowInfo> flowInfoList = new ArrayList<>();
     private static final Logger log = LoggerFactory.getLogger(PacketInLogger.class);
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -120,7 +120,14 @@ public class PacketInLogger {
     }
 
 
+    public List<FlowInfo> getFlowInfoList() {
+        return flowInfoList;
+    }
 
+    public void addFlowInfo(FlowInfo flowInfo) {
+        this.flowInfoList.add(flowInfo);
+    }
+    // Helper method to convert a byte array to a hexadecimal string
     private String byteArrayToHexString(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
         for (byte b : bytes) {
@@ -132,7 +139,8 @@ public class PacketInLogger {
         }
         return hexString.toString();
     }
-  
+
+    
 
     private class PacketInProcessor implements PacketProcessor {
         @Override
@@ -198,102 +206,130 @@ public class PacketInLogger {
             // Insert the FlowRule
             flowRuleService.applyFlowRules(rule);
 
+            // Create a FlowInfo object to store both FlowRule and FlowEntry
+            FlowInfo flowInfo = new FlowInfo();
+            flowInfo.setFlowRule(rule);
+
             // Add FlowInfo to the list
-            flowRulesList.add(rule);
+            flowInfoList.add(flowInfo);
+
         }
     }
 
-    private void checkFrequency() {
-        long currentTimeMillis = System.currentTimeMillis();
-        Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
-        
-        for (FlowEntry flowEntry : flowEntries) {
-            long packetCount = flowEntry.packets(); // Get packet count
-            long elapsedTimeMillis = currentTimeMillis - (flowEntry.life() * 1000);
-            long packets = flowEntry.packets();
-            double packetFrequency = (double) packets / elapsedTimeMillis;
-            
-            if (packetFrequency > 0.00000000001) {
-                
-                Optional<FlowRule> foundFlowRule = flowRulesList.stream()
-                        .filter(flowRule -> flowRule.selector().equals(flowEntry.selector()))
-                        .findFirst();
-                if (foundFlowRule.isPresent()) {
-                    
-                    log.info("Found flow rule: {}", foundFlowRule.get());
-                    flowRulesList.remove(foundFlowRule.get());
-                    log.info("Flow Rule List: {}", flowRulesList);
-                    FlowRule specificFlowRule = foundFlowRule.get();
-                    log.info("Found specific flow rule: {}", specificFlowRule);
-                    flowRuleService.removeFlowRules(specificFlowRule);
-                    dropGTPTunnel(flowEntry);
-                } else {
-                    //log.info("Specific flow rule not found for selector: {}", flowEntry.selector());
-                    // Handle the case where the specific flow rule was not found
+
+    private void updateFlowInfoList() {
+        for(FlowInfo flowInfo : flowInfoList){
+            if(flowInfo.getFlowEntry() == null){
+                log.info("\nHi Diana\n I found a FlowInfo object with a null FlowEntry\n");
+                TrafficSelector flowRuleSelector = flowInfo.getFlowRule().selector();
+                log.info("\n\nFlow Rule Selector: {}\n\n", flowRuleSelector);
+                // Assuming you have a list of FlowEntry instances
+                Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
+                for (FlowEntry flowEntry : flowEntries) {
+                    TrafficSelector flowEntrySelector = flowEntry.selector();
+                    log.info("\n\nFlow Entry Selector: {}\n\n", flowEntrySelector);
+
+                    // Check if the FlowRule's selector matches the FlowEntry's selector
+                    if (flowRuleSelector.equals(flowEntrySelector)) {
+                        log.info("\n\nFlow Rule Selector: {} matches Flow Entry Selector: {}\n\n", flowRuleSelector, flowEntrySelector);
+                        // Update the FlowInfo with the associated FlowEntry
+                        flowInfo.setFlowEntry(flowEntry);
+                        log.info("Associated Flow Rule: {} with Flow Entry: {}", flowInfo.getFlowRule(), flowInfo.getFlowEntry());
+                        break;
+                    }
                 }
             }
-        }
+        } 
     }
 
     
-
+    private void printActiveFlows() {
+        long currentTimeMillis = System.currentTimeMillis();
+        Map<FlowEntry, Long> flowEntryPacketCounts = new HashMap<>();
     
+        for (FlowInfo flowInfo : flowInfoList) {
+            FlowEntry flowEntry = flowInfo.getFlowEntry();
+            long elapsedTimeMillis = currentTimeMillis - (flowEntry.life()*1000);
+            long packets = flowEntry.packets();
 
+            // Calculate packet frequency (packets per millisecond)
+            double packetFrequency = (double) packets / elapsedTimeMillis;
+
+            log.info("\nDiana\nFlow State: {}\n", flowEntry.state());
+            log.info("\nDiana\nFlow Entry Packets: {}\n", packets);
+            log.info("\nDiana\nFlow Entry Selector: {}\n", flowInfo.getFlowEntry().selector());
+            log.info("\nDiana\nFlow Rule Selector: {}\n", flowInfo.getFlowRule().selector());
+            log.info("\nDiana\nFrequency: {}\n", packetFrequency);
+
+            if (packetFrequency > 0.00000000001) {
+                // Detected potential DoS attack
+                log.warn("\nDiana\nPotential DoS Attack Detected for Flow Rule ID: {}\n", flowInfo.getFlowRule().id());
+
+                // Optionally, you can take action here, e.g., block the flow, log the incident, etc.
+                flowRuleService.removeFlowRules(flowInfo.getFlowRule());
+                dropGTPTunnel(flowEntry);
+
+            }
+
+            
+        
+        }
+    }
+    
 
     private void dropGTPTunnel(FlowEntry flowEntry) {
-        log.info("Hi Diana\nI'm about to delete the flow rule: {}", flowEntry);
         TrafficSelector selector = flowEntry.selector();
         String selectorString = selector.toString();
-    
+
         // Define a pattern to match the tunnel ID
         Pattern pattern = Pattern.compile("hdr\\.gtp\\.teid=0x([0-9a-fA-F]+)");
         Matcher matcher = pattern.matcher(selectorString);
-    
+
         if (matcher.find()) {
             // Extract the tunnel ID
             String tunnelIdHex = matcher.group(1);
-            log.info("Tunnel ID (Hex): {}", tunnelIdHex);
-    
-            // Parse the tunnel ID
-            try {
-                long tunnelId = Long.parseLong(tunnelIdHex, 16);
-                log.info("Tunnel ID (Decimal): {}", tunnelId);
-                
-                // Create a byte array from the tunnel ID
-                ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-                buffer.putLong(tunnelId);
-                byte[] tunnelIDBytes = buffer.array();
-                log.info("Tunnel ID (Bytes): {}", tunnelIDBytes);
-    
-                // Build the gtpTunnelCriterion
-                final PiCriterion gtpTunnelCriterion = PiCriterion.builder()
-                    .matchExact(PiMatchFieldId.of("hdr.gtp.teid"), tunnelIDBytes)
-                    .build();
-                log.info("gtpTunnelCriterion: {}", gtpTunnelCriterion);
-    
-                // Create a PiAction to drop
-                final PiAction dropAction = PiAction.builder()
-                        .withId(PiActionId.of("IngressPipeImpl.drop"))
-                        .build();
-                // Build the FlowRule with the specified index
-                final FlowRule rule = Utils.buildFlowRule(deviceId, appId, "IngressPipeImpl.gtp_tunnel", gtpTunnelCriterion, dropAction);
-                // Insert the FlowRule
-                log.info("FlowRule: {}", rule);
-                flowRuleService.applyFlowRules(rule); 
-    
-            } catch (NumberFormatException e) {
-                log.error("Failed to parse tunnel ID hex string: {}", tunnelIdHex, e);
-            }
+            long tunnelId = Long.parseLong(tunnelIdHex, 16);
+
+            // Convert the tunnel ID to a byte array
+            ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+            buffer.putLong(tunnelId);
+            byte[] tunnelIDBytes = buffer.array();
         }
+        final PiCriterion gtpTunnelCriterion = PiCriterion.builder()
+        .matchExact(PiMatchFieldId.of("hdr.gtp.teid"), TunnelIDBytes)
+        .build();
+        log.info("gtpTunnelCriterion: {}", gtpTunnelCriterion);
+        // Create a PiAction to drop
+        final PiAction dropAction = PiAction.builder()
+                .withId(PiActionId.of("IngressPipeImpl.drop"))
+                .build();
+        // Build the FlowRule with the specified index
+        final FlowRule rule = Utils.buildFlowRule(deviceId, appId, "IngressPipeImpl.gtp_tunnel", gtpTunnelCriterion, dropAction);
+        // Insert the FlowRule
+        flowRuleService.applyFlowRules(rule); 
     }
+
+
+
+
     
+    private void checkPacketCount(){
+
+    }
+
+    private void printDiana(){
+        log.info("Hi Diana. \n\n I'm the printDiana method in the PacketInLogger class");
+    }
 
     private class InternalFlowListener implements FlowRuleListener {
         @Override
         public void event(FlowRuleEvent event) {
-            checkFrequency();
+            updateFlowInfoList();
+            printActiveFlows();
+            
         }
     }
+    
     
 
 }
