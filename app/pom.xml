@@ -34,7 +34,7 @@
     <url>http://p4-gtp.adwise.fiu.edu</url>
 
     <properties>
-        <onos.app.name>edu.fiu.adwise.p4-gtp</onos.app.name>
+        <onos.app.name>edu.fiu.adwise.p4_gtp</onos.app.name>
         <onos.app.title>P4-GTP App</onos.app.title>
         <onos.app.origin>https://p4-gtp.adwise.fiu.edu</onos.app.origin>
         <onos.app.category>Traffic Steering</onos.app.category>

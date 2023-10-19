@@ -313,6 +313,11 @@ mv libsimpleswitch_runner.so.0.0.0 ~/
 
 
 ```bash
+sudo bash createveth.sh
+```
+
+
+```bash
 sudo cp libsimpleswitch_runner.so.0.0.0 /lib/x86_64-linux-gnu/
 sudo cp libbmpi.so.0.0.0 /lib/x86_64-linux-gnu/
 ```
@@ -380,7 +385,7 @@ curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H "Content-Type:
 **DELETE APP**
 ```bash
 IP=10.102.211.38
-Pipeconf=edu.fiu.adwise.p4-gtp
+Pipeconf=edu.fiu.adwise.p4_gtp
 curl --fail -sSL --user onos:rocks --noproxy localhost -X DELETE "http://$IP:8181/onos/v1/applications/$Pipeconf"
 ```
 

@@ -4,7 +4,7 @@
       "basic": {
         "managementAddress": "grpc://localhost:50001?device_id=1", 
         "driver": "stratum-bmv2", 
-        "pipeconf": "edu.fiu.adwise.p4-gtp"
+        "pipeconf": "edu.fiu.adwise.p4_gtp"
       }
     }
   }
