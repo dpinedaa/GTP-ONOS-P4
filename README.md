@@ -253,6 +253,10 @@ stratum_bmv2 \
 
 ```
 
+```bash
+cd
+```
+
 
 ```bash
 touch write-reqs.txt
@@ -287,6 +291,10 @@ sudo apt install p4lang-p4c -y
 
 
 ## COMPILE GTP-P4 program 
+
+```bash
+git clone https://github.com/dpinedaa/GTP-ONOS-P4.git
+```
 
 ```bash
 cd GTP-ONOS-P4
