@@ -57,6 +57,10 @@ sudo cp bazel-bin/protoc /usr/local/bin
 sudo apt install maven -y 
 ```
 
+```bash
+cd
+```
+
 ## INSTALL NODE JS
 
 ```bash
