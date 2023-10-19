@@ -65,7 +65,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.TimerTask;
 import java.util.Timer;
-import edu.fiu.adwise.p4_gtp.FlowInfo;
+
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.PiCriterion;
@@ -79,7 +79,7 @@ import java.util.HashMap;
 @Component(immediate = true)
 public class PacketInLogger {
     List<FlowRule> flowRulesList = new ArrayList<>();
-    List<FlowInfo> flowInfoList = new ArrayList<>();
+    
     private static final Logger log = LoggerFactory.getLogger(PacketInLogger.class);
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;

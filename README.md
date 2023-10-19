@@ -156,6 +156,11 @@ build --host_force_python=PY3
 bazel build onos
 ```
 
+
+```bash
+sudo chown $USERNAME:$USERNAME ~/.ssh/known_hosts
+```
+
 **Run ONOS**
 
 ```bash
