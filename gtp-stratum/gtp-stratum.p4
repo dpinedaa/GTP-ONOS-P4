@@ -339,7 +339,7 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
         if(hdr.ethernet.isValid() && hdr.ipv4.isValid()){
             gtp_check.apply();
             gtp_tunnel.apply();
-            if(dropped == false && gtp == false){
+            if(dropped == false){
                 ipv4_check.apply();
             }
         }

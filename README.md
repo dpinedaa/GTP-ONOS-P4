@@ -160,6 +160,9 @@ bazel run onos-local -- [clean] [debug] | grep -iv "Unable to translate flow rul
 
 ## INSTALL DOCKER
 
+```bash
+cd
+```
 
 ```bash
 sudo apt-get update
@@ -194,7 +197,7 @@ sudo apt-get update
 ```
 
 ```bash
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 ```
 
 ```bash
@@ -292,6 +295,14 @@ mv app ~/
 mv chassis-config.txt ~/
 mv createveth.sh ~/
 mv netcfg.json ~/
+mv libbmpi.so.0.0.0 ~/
+ mv libsimpleswitch_runner.so.0.0.0 ~/
+```
+
+
+```bash
+sudo cp libsimpleswitch_runner.so.0.0.0 /lib/x86_64-linux-gnu/
+sudo cp libbmpi.so.0.0.0 /lib/x86_64-linux-gnu/
 ```
 
 ```bash
