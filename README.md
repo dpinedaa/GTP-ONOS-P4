@@ -301,14 +301,14 @@ cd GTP-ONOS-P4
 ```
 
 ```bash
-mv -r gtp-stratum ~/
+mv gtp-stratum ~/
 mv generatepipe.py ~/
 mv app ~/
 mv chassis-config.txt ~/
 mv createveth.sh ~/
 mv netcfg.json ~/
 mv libbmpi.so.0.0.0 ~/
- mv libsimpleswitch_runner.so.0.0.0 ~/
+mv libsimpleswitch_runner.so.0.0.0 ~/
 ```
 
 
@@ -344,31 +344,50 @@ sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-conf
 ```
 
 ```bash
-
+cd
+cp gtp-stratum/gtp-stratum.json app/src/main/resources
+cp gtp-stratum/gtp-stratum.p4info.txt app/src/main/resources
 ```
 
 ```bash
+cd
+cd app
+mvn clean package 
+```
 
+
+**Config ONOS**
+```bash
+ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o LogLevel=ERROR -p 8101 onos@localhost
 ```
 
 ```bash
-
+app activate org.onosproject.drivers.stratum
+app activate org.onosproject.drivers.bmv2
+app activate org.onosproject.hostprovider
+app activate org.onosproject.netconf
 ```
 
 ```bash
+IP=10.102.211.38
+ArtifactID=p4-gtp-app-1.0-SNAPSHOT
 
+curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H "Content-Type: application/octet-stream" \
+     "http://$IP:8181/onos/v1/applications?activate=true" \
+     --data-binary "@target/$ArtifactID.oar"
+```
+
+**DELETE APP**
+```bash
+IP=10.102.211.38
+Pipeconf=edu.fiu.adwise.p4-gtp
+curl --fail -sSL --user onos:rocks --noproxy localhost -X DELETE "http://$IP:8181/onos/v1/applications/$Pipeconf"
 ```
 
 ```bash
-
-```
-
-```bash
-
-```
-
-```bash
-
+IP=10.102.211.38
+curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H 'Content-Type:application/json' \
+                http://$IP:8181/onos/v1/network/configuration -d@./netcfg.json
 ```
 
 ```bash
