@@ -221,12 +221,11 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
 
     counter(30,CounterType.packets) tunnel_counter;
     bool dropped = false;
-    bool gtp = false; 
+    bool pass = true; 
     bool acl = true;
 
-
     action set_gtp(){
-        gtp = true;
+        pass = false;
     }
 
     table gtp_check{
@@ -286,6 +285,7 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
     action track_tunnel(bit<32> index){
         tunnel_counter.count(index);
         acl = false;
+	pass = true;
     }
 
     table gtp_tunnel{
@@ -339,9 +339,10 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
         if(hdr.ethernet.isValid() && hdr.ipv4.isValid()){
             gtp_check.apply();
             gtp_tunnel.apply();
-            if(dropped == false){
+            if(dropped == false && pass == true){
                 ipv4_check.apply();
             }
+
         }
         if(acl == true){
             acl_table.apply();
