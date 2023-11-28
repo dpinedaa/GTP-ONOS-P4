@@ -24,15 +24,7 @@ typedef bit<32>  ipv4_addr_t;
 typedef bit<16>  l4_port_t;
 
 const bit<16> ETHERTYPE_IPV4 = 0x0800;
-const bit<16> ETHERTYPE_ARP = 0x0806;
 
-// ARP RELATED CONST VARS
-const bit<16> ARP_HTYPE = 0x0001; //Ethernet Hardware type is 1
-const bit<16> ARP_PTYPE = ETHERTYPE_IPV4; //Protocol used for ARP is IPV4
-const bit<8>  ARP_HLEN  = 6; //Ethernet address size is 6 bytes
-const bit<8>  ARP_PLEN  = 4; //IP address size is 4 bytes
-const bit<16> ARP_REQ = 1; //Operation 1 is request
-const bit<16> ARP_REPLY = 2; //Operation 2 is reply
 
 
 //------------------------------------------------------------------------------
@@ -44,18 +36,6 @@ header ethernet_t {
     mac_addr_t  src_addr;
     bit<16>     ether_type;
 }
-
-header arp_t {
-  bit<16>   h_type;
-  bit<16>   p_type;
-  bit<8>    h_len;
-  bit<8>    p_len;
-  bit<16>   op_code;
-  mac_addr_t src_mac;
-  bit<32> src_ip;
-  mac_addr_t dst_mac;
-  bit<32> dst_ip;
-  }
 
 
 header ipv4_t {
@@ -130,7 +110,6 @@ struct parsed_headers_t {
     cpu_out_header_t cpu_out;
     cpu_in_header_t cpu_in;
     ethernet_t ethernet;
-    arp_t arp;
     ipv4_t ipv4;
     udp_t udp;
     gtp_t gtp;
@@ -140,9 +119,11 @@ struct parsed_headers_t {
     udp_t inner_udp;
 }
 
-struct local_metadata_t {
-        @field_list(1)
-        port_num_t ingress_port;
+
+struct metadata {
+    @field_list(1)
+    port_num_t ingress_port;
+    bit<32> flowID;
 }
 
 
@@ -152,11 +133,11 @@ struct local_metadata_t {
 
 parser ParserImpl (packet_in packet,
                    out parsed_headers_t hdr,
-                   inout local_metadata_t local_metadata,
+                   inout metadata meta,
                    inout standard_metadata_t standard_metadata)
 {
     state start {
-        local_metadata.ingress_port = standard_metadata.ingress_port;
+        meta.ingress_port = standard_metadata.ingress_port;
         transition select(standard_metadata.ingress_port) {
             CPU_PORT: parse_packet_out;
             default: parse_ethernet;
@@ -195,10 +176,41 @@ parser ParserImpl (packet_in packet,
 
     state parse_gtp {
         packet.extract(hdr.gtp);
-        transition select(hdr.gtp.teid) {
+        transition select(hdr.gtp.flags) {
+            0x34: parse_gtp_optional;
             default: accept;
         }
     }
+
+    state parse_gtp_optional {
+        packet.extract(hdr.gtp_optional);
+        transition select(hdr.gtp_optional.next_extension_header_type) {
+            0x85: parse_extension_header;
+            default: accept;
+        }
+    }
+
+    state parse_extension_header {
+        packet.extract(hdr.extension_header);
+        transition select(hdr.extension_header.QFI){
+            1: parse_inner_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_inner_ipv4 {
+        packet.extract(hdr.inner_ipv4);
+        transition select(hdr.inner_ipv4.protocol) {
+            17: parse_inner_udp;
+            default: accept;
+        }
+    }
+
+    state parse_inner_udp {
+        packet.extract(hdr.inner_udp);
+        transition accept;
+    }
+
 
 
 
@@ -206,7 +218,7 @@ parser ParserImpl (packet_in packet,
 
 
 control VerifyChecksumImpl(inout parsed_headers_t hdr,
-                           inout local_metadata_t meta)
+                           inout metadata meta)
 {
     // Description taken from NGSDN-TUTORIAL
     // Not used here. We assume all packets have valid checksum, if not, we let
@@ -216,16 +228,43 @@ control VerifyChecksumImpl(inout parsed_headers_t hdr,
 
 
 control IngressPipeImpl (inout parsed_headers_t    hdr,
-                         inout local_metadata_t    local_metadata,
+                         inout metadata    meta,
                          inout standard_metadata_t standard_metadata) {
 
     counter(30,CounterType.packets) tunnel_counter;
     bool dropped = false;
     bool pass = true; 
     bool acl = true;
+    bool gtp = false;
+
+    action compute_hash(){
+        hash(meta.flowID, HashAlgorithm.crc32, (bit<32>)0, {hdr.gtp.teid,
+                                                            hdr.inner_ipv4.src_addr,
+                                                            hdr.inner_ipv4.dst_addr},
+                                                            (bit<32>)10000);
+    }
+
+    register<ipv4_addr_t>(10000) r_inner_ipv4_src;
+    register<ipv4_addr_t>(10000) r_inner_ipv4_dst;
+    register<bit<32>>(10000) r_gtp_teid;
+    register<bit<48>>(10000) r_startTime;   
+    register<bit<48>>(10000) r_endTime;
+    register<bit<64>>(10000) r_totalSize;
+    register<bit<16>>(10000) r_inner_srcPort;
+    register<bit<16>>(10000) r_inner_dstPort;
+    register<bit<1>>(10000) r_exist;
+    register<bit<48>>(10000) r_duration;
+
+    
+
+    register<bit<32>>(10000) r_index;
+    register<bit<32>>(1) r_counter;
+
+
 
     action set_gtp(){
         pass = false;
+        gtp = true;
     }
 
     table gtp_check{
@@ -237,7 +276,7 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
             set_gtp;
         }
         const entries = {
-            {2152, 2152}: set_gtp;
+            {2152, 2152}: set_gtp();
         }
         @name("gtp_check_counter")
         counters = direct_counter(CounterType.packets_and_bytes);
@@ -341,6 +380,38 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
                 ipv4_check.apply();
             }
 
+            if(gtp==true){
+                compute_hash();
+                bit<32> counter_value;
+                r_counter.read(counter_value, 0);
+                r_index.write(counter_value, meta.flowID);
+                bit<1> exist_value;
+                r_exist.read(exist_value, meta.flowID);
+
+                if(exist_value==0){
+                    r_inner_ipv4_src.write(meta.flowID, hdr.inner_ipv4.src_addr);
+                    r_inner_ipv4_dst.write(meta.flowID, hdr.inner_ipv4.dst_addr);
+                    r_gtp_teid.write(meta.flowID, hdr.gtp.teid);
+                    r_startTime.write(meta.flowID, standard_metadata.ingress_global_timestamp);
+                    r_endTime.write(meta.flowID, standard_metadata.ingress_global_timestamp);
+                    bit<64> temporary = (bit<64>) hdr.inner_ipv4.total_len;
+                    r_totalSize.write(meta.flowID, temporary);
+                    r_inner_srcPort.write(meta.flowID, hdr.inner_udp.srcPort);
+                    r_inner_dstPort.write(meta.flowID, hdr.inner_udp.dstPort);
+                    r_exist.write(meta.flowID, 1);
+                    r_counter.write(0, counter_value+1);
+                }
+                else{
+                    r_endTime.write(meta.flowID, standard_metadata.ingress_global_timestamp);
+                    bit<64> old_size; 
+                    r_totalSize.read(old_size, meta.flowID);
+                    bit<48> initial_startTime; 
+                    r_startTime.read(initial_startTime, meta.flowID);
+                    r_duration.write(meta.flowID, standard_metadata.ingress_global_timestamp - initial_startTime);
+                    r_totalSize.write(meta.flowID, old_size + (bit<64>) hdr.inner_ipv4.total_len);
+                }
+            }
+
         }
         if(acl == true){
             acl_table.apply();
@@ -351,7 +422,7 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
 
 
 control EgressPipeImpl (inout parsed_headers_t hdr,
-                        inout local_metadata_t local_metadata,
+                        inout metadata meta,
                         inout standard_metadata_t standard_metadata) {
     apply {
 
@@ -365,7 +436,7 @@ control EgressPipeImpl (inout parsed_headers_t hdr,
             //    ingress port (standard_metadata.ingress_port).
 
             hdr.cpu_in.setValid();
-            hdr.cpu_in.ingress_port = local_metadata.ingress_port;
+            hdr.cpu_in.ingress_port = meta.ingress_port;
             exit;
         }
 
@@ -374,7 +445,7 @@ control EgressPipeImpl (inout parsed_headers_t hdr,
 
 
 control ComputeChecksumImpl(inout parsed_headers_t hdr,
-                            inout local_metadata_t local_metadata)
+                            inout metadata meta)
 {
     apply {
     }
@@ -385,7 +456,6 @@ control DeparserImpl(packet_out packet, in parsed_headers_t hdr) {
     apply {
         packet.emit(hdr.cpu_in);
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.arp);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.udp);
         packet.emit(hdr.gtp);
