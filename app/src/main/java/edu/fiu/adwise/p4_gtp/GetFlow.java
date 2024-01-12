@@ -1,3 +1,4 @@
+package edu.fiu.adwise.p4_gtp;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.io.IOException;
@@ -46,7 +47,12 @@ import java.util.regex.Pattern;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
+import java.nio.ByteBuffer;
+import java.util.Arrays; // Import the Arrays class
+import java.math.BigInteger;
+import java.nio.ByteOrder;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 @Component(immediate = true)
 public class GetFlow {
@@ -61,7 +67,7 @@ public class GetFlow {
     protected FlowRuleService flowRuleService;
 
     private ApplicationId appId;
-    private DeviceId deviceId = DeviceId.deviceId("device:s1");
+    private static DeviceId deviceId = DeviceId.deviceId("device:s1");
     private ScheduledExecutorService scheduledExecutor;
 
     @Activate
@@ -79,16 +85,14 @@ public class GetFlow {
         flowRuleService.removeFlowRulesById(appId);
         if (scheduledExecutor != null) {
             scheduledExecutor.shutdown();
-        }
+        } 
         flowDetailsList.clear();
         log.info("Stopped");
     }
 
-
     public static List<FlowDetails> getFlowDetailsList() {
         return flowDetailsList;
     }
-    
 
     private class SendActiveFlows implements Runnable {
         private DeviceId deviceId;
@@ -101,58 +105,47 @@ public class GetFlow {
         public void run() {
             getFlowsStatsAndSendToServer();
         }
-    }
+    } 
 
-    private void getFlowsStatsAndSendToServer() {
+    public void getFlowsStatsAndSendToServer() {
+                
         Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
-    
-        // Initialize flow entry count
-        int flowEntryCount = 0;
-    
         for (FlowEntry entry : flowEntries) {
             if (entry.table().toString().equals("IngressPipeImpl.gtp_tunnel") && entry.treatment().toString().contains("IngressPipeImpl.track_tunnel")) {
-
                 if (!flowDetailsList.stream().anyMatch(flowDetails -> flowDetails.getFlowId().equals(entry.id().toString()))) {
+
                     // Create FlowDetails object and add to the list
-                    String gtpTunnelId = extractValue(entry.selector().toString(), "hdr.gtp.teid=(\\S+)");
                     String srcIpAddress = convertHexToIPv4(extractValue(entry.selector().toString(), "hdr.inner_ipv4.src_addr=(\\S+)"));
-                    log.info("srcIpAddress: " + srcIpAddress);
                     String dstIpAddress = convertHexToIPv4(extractValue(entry.selector().toString(), "hdr.inner_ipv4.dst_addr=(\\S+)"));
-                    log.info("dstIpAddress: " + dstIpAddress);
                     String protocol = String.valueOf(Integer.parseInt(extractValue(entry.selector().toString(), "hdr.inner_ipv4.protocol=(\\S+)").substring(2), 16));
-                    String srcPort = convertHexToDecimal(extractValue(entry.selector().toString(), "hdr.inner_udp.srcPort=(\\S+)"));
-                    String dstPort = convertHexToDecimal(extractValue(entry.selector().toString(), "hdr.inner_udp.dstPort=(\\S+)"));
-                    /* String srcPortHex = extractValue(entry.selector().toString(), "hdr.inner_udp.srcPort=(\\S+)");
-                    String dstPortHex = extractValue(entry.selector().toString(), "hdr.inner_udp.dstPort=(\\S+)");
-
-                    // Remove the "0x" prefix and convert to decimal
-                    String srcPortDec = String.valueOf(Integer.parseInt(srcPortHex.substring(2), 16));
-                    String dstPortDec = String.valueOf(Integer.parseInt(dstPortHex.substring(2), 16));
-                    lo
- */
+                    int protocolInt = Integer.parseInt(protocol);
                     
-                    FlowDetails flowDetails = new FlowDetails(
-                            entry.id().toString(),
-                            gtpTunnelId,
-                            srcIpAddress,
-                            dstIpAddress,
-                            protocol,
-                            srcPort,
-                            dstPort,
-                            entry.packets(),
-                            entry.bytes(),
-                            entry.life()
-                    );
-                    flowDetailsList.add(flowDetails);
-                    sendFlowMessagesToServer(flowDetails);
+                    for (FlowDetails flowDetails : flowDetailsList) {
+                        if (flowDetails.getSrcInnerIpv4().equals(srcIpAddress) && flowDetails.getDstInnerIpv4().equals(dstIpAddress) && flowDetails.getInnerIpv4Protocol() == protocolInt) {
 
-                    //sendFlowMessagesToServer(jsonMessages, entry);
+                            flowDetails.setFlowId(entry.id().toString());
+                            //Update the past values
+                            flowDetails.setPastBytesCount(flowDetails.getCurrentBytesCount());
+                            flowDetails.setPastPacketCount(flowDetails.getCurrentPacketCount());
+                            flowDetails.setPastDurationSeconds(flowDetails.getCurrentDurationSeconds());
+                            flowDetails.setPastDurationMicroseconds(flowDetails.getCurrentDurationMicroseconds());
+                            
+                            //Update the current values
+                            flowDetails.setCurrentBytesCount(entry.bytes());
+                            flowDetails.setCurrentPacketCount(entry.packets());
+                            flowDetails.setCurrentDurationSeconds(entry.life());
+                            flowDetails.setCurrentDurationMicroseconds(entry.life() * 1000000);
+                            
+                            sendFlowMessagesToServer(flowDetails);
+                        }
+                    }
+
+                    
                 }
             }
         }
-    
-        // Print or use flow entry count as needed
-        log.info("Total Flow Entries: " + flowEntryCount);
+        
+                
     }
 
     public String extractValue(String input, String regex) {
@@ -167,25 +160,21 @@ public class GetFlow {
         }
         return null;
     }
-    
-    
-    
-    
 
     private void sendFlowMessagesToServer(FlowDetails flowDetails) {
         try {
             // Convert FlowDetails object to JSON format (assuming you have a method for this)
             String jsonMessages = convertFlowDetailsToJson(flowDetails);
-    
-            Socket socket = new Socket("10.102.211.38", 7000);
+
+            Socket socket = new Socket("10.102.211.11", 6000);
             OutputStream outputStream = socket.getOutputStream();
             outputStream.write(jsonMessages.getBytes());
-    
+
             // Receive a response from the server (in this case, "1")
             InputStream inputStream = socket.getInputStream();
             byte[] responseBuffer = new byte[1];
             int bytesRead = inputStream.read(responseBuffer);
-    
+
             if (bytesRead == 1 && responseBuffer[0] == '1') {
                 // Successfully received acknowledgment from the server
                 log.info("Received acknowledgment from the server");
@@ -193,13 +182,13 @@ public class GetFlow {
                 // Handle acknowledgment failure
                 log.error("Received unexpected response from the server");
             }
-    
+
             socket.close();
         } catch (IOException e) {
             log.error("Error sending flow messages to the server", e);
         }
     }
-    
+
     // Assuming you have a method to convert FlowDetails to JSON
     private String convertFlowDetailsToJson(FlowDetails flowDetails) {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -210,7 +199,6 @@ public class GetFlow {
             return "{}"; // Return empty JSON as a fallback
         }
     }
-
 
     public static String convertHexToIPv4(String hexValue) {
         try {
@@ -232,7 +220,6 @@ public class GetFlow {
         }
     }
 
-
     // Add the convertHexToDecimal method here (if you haven't added it already)
     private String convertHexToDecimal(String hexValue) {
         try {
@@ -249,6 +236,6 @@ public class GetFlow {
             return null;
         }
     }
-    
+
     
 }

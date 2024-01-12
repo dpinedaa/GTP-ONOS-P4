@@ -49,7 +49,7 @@ def process_flows(flows):
         print("\n")
 
 def start_server():
-    server_address = ('10.102.211.38', 7000)
+    server_address = ('10.102.211.11', 7000)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     try:
