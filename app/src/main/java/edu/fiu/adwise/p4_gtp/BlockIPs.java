@@ -89,6 +89,8 @@ public class BlockIPs {
     List<FlowRule> flowRuleList = CreateGTPFlows.getFlowRulesList();
     List<String> flaggedIPAddress = FlagAttacks.getFlaggedIPAddress();
     List <String> blockedIPAddress = RemoveFlows.getRemovedIPAddress();
+    static List <String> bannedIPs = new ArrayList<String>();
+
     
 
     private static final Logger log = LoggerFactory.getLogger(BlockIPs.class);
@@ -124,6 +126,11 @@ public class BlockIPs {
             scheduledExecutor.shutdown();
         }
         log.info("Stopped");
+        DeleteEverything();
+    }
+
+    public static List<String> getBannedIPs() {
+        return bannedIPs;
     }
 
 
@@ -154,9 +161,13 @@ public class BlockIPs {
             addDropFlow(ip);
             addIPtoDB(ip);
             blockedIPAddress.remove(i);
+            bannedIPs.add(ip);
             
         }
     }
+
+
+
 
     
 
@@ -297,6 +308,84 @@ private void sendFlowMessagesToServer(String flowString) {
         } catch (NumberFormatException e) {
             // Handle exception if conversion fails
             return null;
+        }
+    }
+
+    private void DeleteEverything(){
+        try{
+            String postUrl = "http://10.102.211.11:3000/flows";
+            URL url = new URL(postUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setDoOutput(true);
+
+            try (OutputStream os = connection.getOutputStream()) {
+                    byte[] input = "".getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode == 200) {
+                    log.info("Flow data posted successfully.");
+                } else {
+                    log.info("Failed to post flow data. HTTP Response Code: " + responseCode);
+                    // Read the error message from the server
+                    InputStream errorStream = connection.getErrorStream();
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream));
+                    String line;
+                    StringBuilder response = new StringBuilder();
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    reader.close();
+                    log.info("Server error message: " + response.toString());
+                }
+
+                connection.disconnect();
+
+        }
+        catch(Exception e){
+            log.info("Exception occurred while deleting everything: " + e.getMessage());
+            e.printStackTrace();  // Print the stack trace for more detailed error information
+        }
+
+        try{
+            String postUrl = "http://10.102.211.11:3001/ip";
+            URL url = new URL(postUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setDoOutput(true);
+
+            try (OutputStream os = connection.getOutputStream()) {
+                    byte[] input = "".getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode == 200) {
+                    log.info("Flow data posted successfully.");
+                } else {
+                    log.info("Failed to post flow data. HTTP Response Code: " + responseCode);
+                    // Read the error message from the server
+                    InputStream errorStream = connection.getErrorStream();
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream));
+                    String line;
+                    StringBuilder response = new StringBuilder();
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    reader.close();
+                    log.info("Server error message: " + response.toString());
+                }
+
+                connection.disconnect();
+
+        }
+        catch(Exception e){
+            log.info("Exception occurred while deleting everything: " + e.getMessage());
+            e.printStackTrace();  // Print the stack trace for more detailed error information
         }
     }
 

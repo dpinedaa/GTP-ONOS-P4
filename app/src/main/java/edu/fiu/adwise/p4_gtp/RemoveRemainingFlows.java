@@ -1,6 +1,8 @@
 package edu.fiu.adwise.p4_gtp;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URL;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +34,7 @@ import java.util.HashMap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.nio.ByteBuffer;
@@ -64,6 +67,7 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.FlowEntry;
 
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -71,16 +75,16 @@ import java.net.UnknownHostException;
 
 
 @Component(immediate = true)
-public class RemoveFlows { 
+public class RemoveRemainingFlows { 
     List<UnidirectionalFlow> unidirectionalFlowList = UpdateUnidirectionalFlow.getUnidirectionalFlowList();
     List<FlowDetails> flowDetailsList = GetFlow.getFlowDetailsList();
     List<FlowRule> flowRuleList = CreateGTPFlows.getFlowRulesList();
     List<String> flaggedIPAddress = FlagAttacks.getFlaggedIPAddress();
-    static List<String> removedIPAddress = new ArrayList<String>();
+    static List<String> bannedIPAddress = BlockIPs.getBannedIPs();
 
     
 
-    private static final Logger log = LoggerFactory.getLogger(RemoveFlows.class);
+    private static final Logger log = LoggerFactory.getLogger(RemoveRemainingFlows.class);
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -96,11 +100,11 @@ public class RemoveFlows {
 
     @Activate
     public void activate() {
-        appId = coreService.registerApplication("edu.fiu.adwise.RemoveFlows");
+        appId = coreService.registerApplication("edu.fiu.adwise.RemoveRemainingFlows");
         TrafficSelector selector = DefaultTrafficSelector.emptySelector();
 
         scheduledExecutor = Executors.newScheduledThreadPool(1);
-        scheduledExecutor.scheduleAtFixedRate(new RemoveExistingFlows(deviceId), 0, 2, TimeUnit.SECONDS);
+        scheduledExecutor.scheduleAtFixedRate(new RemoveRemainingFlowss(deviceId), 0, 2, TimeUnit.SECONDS);
     }
 
     @Deactivate
@@ -113,14 +117,12 @@ public class RemoveFlows {
         log.info("Stopped");
     }
 
-    public static List<String> getRemovedIPAddress() {
-        return removedIPAddress;
-    }
 
-    private class RemoveExistingFlows implements Runnable {
+
+    private class RemoveRemainingFlowss implements Runnable {
         private DeviceId deviceId;
 
-        public RemoveExistingFlows(DeviceId deviceId) {
+        public RemoveRemainingFlowss(DeviceId deviceId) {
             this.deviceId = deviceId;
         }
 
@@ -133,14 +135,15 @@ public class RemoveFlows {
    public void removeExistingFlows() {
     
 
-    for(int i=0; i<flaggedIPAddress.size(); i++){
-        String flaggedIP = flaggedIPAddress.get(i);
+    for(int i=0; i<bannedIPAddress.size(); i++){
+        String bannedIP = bannedIPAddress.get(i);
         Iterator<UnidirectionalFlow> iterator = unidirectionalFlowList.iterator();
         while (iterator.hasNext()) {
             UnidirectionalFlow unidirectionalFlow = iterator.next();
-            if (unidirectionalFlow.getForwardFlow().getSrcInnerIpv4().equals(flaggedIP)) {
+            if (unidirectionalFlow.getForwardFlow().getSrcInnerIpv4().equals(bannedIP)) {
                 FlowRule fwdFlowRule = unidirectionalFlow.getFwdFlowRule();
                 FlowRule bwdFlowRule = unidirectionalFlow.getBwdFlowRule();
+                removeFlow(fwdFlowRule.id().toString());
                 flowRuleService.removeFlowRules(fwdFlowRule);
                 flowRuleService.removeFlowRules(bwdFlowRule);
                 flowDetailsList.remove(unidirectionalFlow.getForwardFlow());
@@ -149,10 +152,8 @@ public class RemoveFlows {
             }
         }
 
-        removedIPAddress.add(flaggedIP);
-        flaggedIPAddress.remove(flaggedIP);
 
-        String messageString = "Removed flow rules for IP address: " + flaggedIP;
+        String messageString = "Removed flow rules for IP address: " + bannedIP;
         sendFlowMessagesToServer(messageString);
         
     }
@@ -213,6 +214,45 @@ private void sendFlowMessagesToServer(String flowString) {
             return null;
         }
     }
+
+
+    public static void removeFlow(String flowId) {
+        try {
+            String deleteUrl = "http://10.102.211.11:3000/flows/" + flowId;
+            URL url = new URL(deleteUrl);
+    
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("Content-Type", "application/json");
+    
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                log.info("Flow data deleted successfully.");
+            } else {
+                log.info("Failed to delete flow data. HTTP Response Code: " + responseCode);
+                // Read the error message from the server
+                InputStream errorStream = connection.getErrorStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream));
+                String line;
+                StringBuilder response = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                log.info("Server error message: " + response.toString());
+            }
+    
+            connection.disconnect();
+    
+        } catch (Exception e) {
+            log.info("Exception occurred while deleting flows: " + e.getMessage());
+            e.printStackTrace();  // Print the stack trace for more detailed error information
+        }
+    }
+    
+
+    
+
 
 
 

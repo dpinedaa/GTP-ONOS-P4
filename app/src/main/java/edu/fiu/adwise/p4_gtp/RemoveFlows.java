@@ -1,6 +1,8 @@
 package edu.fiu.adwise.p4_gtp;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URL;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +34,7 @@ import java.util.HashMap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.nio.ByteBuffer;
@@ -64,6 +67,7 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.FlowEntry;
 
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -141,11 +145,14 @@ public class RemoveFlows {
             if (unidirectionalFlow.getForwardFlow().getSrcInnerIpv4().equals(flaggedIP)) {
                 FlowRule fwdFlowRule = unidirectionalFlow.getFwdFlowRule();
                 FlowRule bwdFlowRule = unidirectionalFlow.getBwdFlowRule();
+                removeFlow(fwdFlowRule.id().toString());
                 flowRuleService.removeFlowRules(fwdFlowRule);
                 flowRuleService.removeFlowRules(bwdFlowRule);
                 flowDetailsList.remove(unidirectionalFlow.getForwardFlow());
                 flowDetailsList.remove(unidirectionalFlow.getBackwardFlow());
                 iterator.remove();
+
+
             }
         }
 
@@ -213,6 +220,45 @@ private void sendFlowMessagesToServer(String flowString) {
             return null;
         }
     }
+
+
+    public static void removeFlow(String flowId) {
+        try {
+            String deleteUrl = "http://10.102.211.11:3000/flows/" + flowId;
+            URL url = new URL(deleteUrl);
+    
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("Content-Type", "application/json");
+    
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                log.info("Flow data deleted successfully.");
+            } else {
+                log.info("Failed to delete flow data. HTTP Response Code: " + responseCode);
+                // Read the error message from the server
+                InputStream errorStream = connection.getErrorStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(errorStream));
+                String line;
+                StringBuilder response = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                log.info("Server error message: " + response.toString());
+            }
+    
+            connection.disconnect();
+    
+        } catch (Exception e) {
+            log.info("Exception occurred while deleting flows: " + e.getMessage());
+            e.printStackTrace();  // Print the stack trace for more detailed error information
+        }
+    }
+    
+
+    
+
 
 
 
