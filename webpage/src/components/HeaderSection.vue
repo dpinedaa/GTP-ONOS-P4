@@ -1,6 +1,7 @@
 <template>
     <div class="layout">
         <div class="header">
+            <h1>P4-ONOS-GTP</h1>
             <h1>Flows</h1>
         </div>
     </div>
@@ -25,13 +26,13 @@ export default{
                 console.log(err);
             })
 
-            // await axios.delete('http://10.102.211.153:4000/unidirectionalflows')
-            // .then(res => {
-            //     console.log(res);
-            // })
-            // .catch(err => {
-            //     console.log(err);
-            // })
+            await axios.delete('http://10.102.211.11:3001/ips')
+             .then(res => {
+                 console.log(res);
+             })
+             .catch(err => {
+                 console.log(err);
+             })
             
 
 
@@ -42,6 +43,7 @@ export default{
 
 
 <style>
+@import '../assets/header.css';
 
 /*Nav bar button style*/
 .nav-btn{

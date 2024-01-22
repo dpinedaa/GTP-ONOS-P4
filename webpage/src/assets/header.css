@@ -1,12 +1,10 @@
 .header {
-    display: flex;
-    text-align: center;
-    justify-content: center;
-    width: 70%;
-    height: 60px;
-    background-color: #42b983;
-    height: 100px;
-    color: black;
-  
-    
-  }
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  width: 70%;
+  height: 150px;
+  background-color: #306b35;
+  color: white;
+  flex-direction: column;
+}
