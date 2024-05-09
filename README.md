@@ -3,7 +3,7 @@
 ## Bazel
 
 ```bash
-sudo apt install apt-transport-https curl gnupg -y
+sudo apt install apt-transport-https curl gnupg ethtool -y
 ```
 
 ```bash
@@ -57,66 +57,6 @@ sudo apt-get update
 ```bash
 sudo apt-get install nodejs -y
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## ONOS
 
@@ -268,6 +208,36 @@ stratum_bmv2 \
     -bmv2_log_level=debug
 ```
 
+
+
+### P4
+
+
+```bash
+sudo apt install curl -y 
+```
+
+```bash
+source /etc/lsb-release
+```
+
+```bash
+echo "deb http://download.opensuse.org/repositories/home:/p4lang/xUbuntu_${DISTRIB_RELEASE}/ /" | sudo tee /etc/apt/sources.list.d/home:p4lang.list
+```
+
+```bash
+curl -fsSL https://download.opensuse.org/repositories/home:p4lang/xUbuntu_${DISTRIB_RELEASE}/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_p4lang.gpg > /dev/null
+```
+
+```bash
+sudo apt-get update
+```
+
+```bash
+sudo apt install p4lang-p4c -y
+```
+
+
 ```bash
 
 ```
@@ -291,6 +261,109 @@ stratum_bmv2 \
 ```bash
 
 ```
+
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+```bash
+
+```
+
+
 
 
 
