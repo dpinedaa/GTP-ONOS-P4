@@ -2,7 +2,8 @@ package ONOSAPPNAME;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import ONOSAPPNAME.common.Utils;
+import ONOSAPPNAME.common.FabricDeviceConfig;
+import ONOSAPPNAME.pipeconf.PipeconfLoader;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -24,6 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Arrays; // Import the Arrays class
 import java.util.Collection;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -69,11 +73,19 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.config.basics.SubjectFactories;
+import org.onosproject.cfg.ComponentConfigService;
+import java.util.concurrent.ExecutorService;
+import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.config.ConfigFactory;
 import static ONOSAPPNAME.AppConstants.PIPECONF_ID;
 import static ONOSAPPNAME.AppConstants.APP_NAME;
 import static ONOSAPPNAME.AppConstants.CLEAN_UP_DELAY;
 import static ONOSAPPNAME.AppConstants.DEFAULT_CLEAN_UP_RETRY_TIMES;
 import static ONOSAPPNAME.common.Utils.sleep;
+import org.onosproject.net.group.GroupService;
+
 
 @Component(immediate = true)
 public class BaselineClass {
@@ -101,6 +113,10 @@ public class BaselineClass {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private ComponentConfigService compCfgService;
 
+    private ApplicationId appId;
+    private ScheduledExecutorService scheduledExecutor;
+
+
     private final ConfigFactory<DeviceId, FabricDeviceConfig> fabricConfigFactory =
             new ConfigFactory<DeviceId, FabricDeviceConfig>(
                     SubjectFactories.DEVICE_SUBJECT_FACTORY, FabricDeviceConfig.class, FabricDeviceConfig.CONFIG_KEY) {
@@ -110,7 +126,6 @@ public class BaselineClass {
                 }
             };
 
-    private ApplicationId appId;
 
     // For the sake of simplicity and to facilitate reading logs, use a
     // single-thread executor to serialize all configuration tasks.
@@ -118,30 +133,20 @@ public class BaselineClass {
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication(APP_NAME);
+        appId = coreService.registerApplication("ONOSAPPNAME");
         
-        // Wait to remove flow and groups from previous executions.
-        waitPreviousCleanup();
-
-        compCfgService.preSetProperty("org.onosproject.net.flow.impl.FlowRuleManager",
-                                      "fallbackFlowPollFrequency", "4", false);
-        compCfgService.preSetProperty("org.onosproject.net.group.impl.GroupManager",
-                                      "fallbackGroupPollFrequency", "3", false);
-        compCfgService.preSetProperty("org.onosproject.provider.host.impl.HostLocationProvider",
-                                      "requestIpv6ND", "true", false);
-        compCfgService.preSetProperty("org.onosproject.provider.lldp.impl.LldpLinkProvider",
-                                      "useBddp", "false", false);
-
-        configRegistry.registerConfigFactory(fabricConfigFactory);
+        TrafficSelector selector = DefaultTrafficSelector.emptySelector();
+        // scheduledExecutor = Executors.newScheduledThreadPool(1);
+        // scheduledExecutor.scheduleAtFixedRate(new UpdateStatistics(deviceId), 0, 2, TimeUnit.SECONDS);
         log.info("Started");
     }
 
     @Deactivate
     protected void deactivate() {
-        configRegistry.unregisterConfigFactory(fabricConfigFactory);
-
-        cleanUp();
-
+        flowRuleService.removeFlowRulesById(appId);
+        if (scheduledExecutor != null) {
+            scheduledExecutor.shutdown();
+        }
         log.info("Stopped");
     }
     
