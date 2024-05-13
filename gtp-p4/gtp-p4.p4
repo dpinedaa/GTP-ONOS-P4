@@ -226,23 +226,46 @@ control VerifyChecksumImpl(inout parsed_headers_t hdr,
     apply { /* EMPTY */ }
 }
 
-
 control IngressPipeImpl (inout parsed_headers_t    hdr,
                          inout metadata    meta,
                          inout standard_metadata_t standard_metadata) {
-
+    bool dropped = false;
+    bool acl = false;
+    bool gtp = false; 
+    bool pass = true;
     // Drop action shared by many tables.
     action drop() {
         mark_to_drop(standard_metadata);
         dropped = true;
         acl = false;
-        inner_ipv4_dropped = true;
+        pass = false; 
     }
 
     action send_to_port(port_num_t port_num) {
         standard_metadata.egress_spec = port_num;
-        acl = false;
     }
+    
+    action set_gtp(){
+        gtp = true;
+        acl = true; 
+        pass = true; 
+    }
+
+    table gtp_check{
+        key = {
+            hdr.udp.dstPort: exact;
+            hdr.udp.srcPort: exact;
+        }
+        actions = {
+            set_gtp;
+        }
+        const entries = {
+            {2152, 2152}: set_gtp();
+        }
+        @name("gtp_check_counter")
+        counters = direct_counter(CounterType.packets_and_bytes);
+    }
+
 
     table drop_inner_ipv4{
         key = {
@@ -252,9 +275,6 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
             drop;
         }
     }
-
-
-
 
     table fwd_vm_traffic{
         key = {
@@ -276,30 +296,6 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
         counters= direct_counter(CounterType.packets_and_bytes);
     }
    
-
-    
-    action track_tunnel(){
-        acl = false;
-	    pass = true;
-    }
-
-    table gtp_tunnel{
-        key ={
-            hdr.inner_ipv4.src_addr: exact;
-            hdr.inner_ipv4.dst_addr: exact;
-            hdr.inner_ipv4.protocol: exact;
-        }
-        actions = {
-            drop; 
-            track_tunnel;   
-        }
-        @name("gtp_tunnel_counter")
-        counters = direct_counter(CounterType.packets_and_bytes);
-    }
-
-
-    
-
     action send_to_cpu() {
         standard_metadata.egress_spec = CPU_PORT;
     }
@@ -315,7 +311,6 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
             hdr.ethernet.src_addr:          ternary;
             hdr.ethernet.ether_type:        ternary;
         }
-        
         actions = {
             send_to_cpu;
             clone_to_cpu;
@@ -327,27 +322,19 @@ control IngressPipeImpl (inout parsed_headers_t    hdr,
         counters = direct_counter(CounterType.packets_and_bytes);
     }
     apply {
-
         if(hdr.cpu_out.isValid()){
             standard_metadata.egress_spec = hdr.cpu_out.egress_port;
             hdr.cpu_out.setInvalid();
             exit;
         }
-
         if(hdr.ethernet.isValid() && hdr.ipv4.isValid()){
-            // gtp_check.apply();
-            drop_inner_ipv4.apply();
-
-            if(inner_ipv4_dropped == false){
-                gtp_tunnel.apply();
-                if(dropped == false && pass == true){
-                    fwd_vm_traffic.apply();
-                }
+            gtp_check.apply();
+            if(gtp == true){
+                drop_inner_ipv4.apply();
             }
-            
-
-
-
+            if(dropped == false){
+                fwd_vm_traffic.apply();
+            }
         }
         if(acl == true){
             acl_table.apply();

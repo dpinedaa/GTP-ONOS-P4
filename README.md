@@ -1254,32 +1254,28 @@ sudo ./build/nr-ue -c config/open5gs-ue1.yaml
 touch write-reqs.txt
 ```
 
-## COMPILE GTP-P4 program 
+* Clone the repo  
 
 ```bash
 git clone https://github.com/dpinedaa/GTP-ONOS-P4.git
-```
-
-```bash
 cd GTP-ONOS-P4
 ```
 
 ```bash
-mv gtp-stratum ~/
-mv generatepipe.py ~/
-mv app ~/
-mv chassis-config.txt ~/
-mv createveth.sh ~/
-mv netcfg.json ~/
-mv libbmpi.so.0.0.0 ~/
-mv libsimpleswitch_runner.so.0.0.0 ~/
+cp -r baseline/  ~/
+cp chassis-config.txt ~/
+cp createveth.sh ~/
+cp generatepipe.py ~/
+cp -r gtp-p4/ ~/
+cp libbmpi.so.0.0.0 ~/
+cp libsimpleswitch_runner.so.0.0.0 ~/
+cp netcfg.json ~/
+cp onos-app.sh ~/
 ```
-
 
 ```bash
 sudo bash createveth.sh
 ```
-
 
 ```bash
 sudo cp libsimpleswitch_runner.so.0.0.0 /lib/x86_64-linux-gnu/
@@ -1291,12 +1287,11 @@ cd
 ```
 
 ```bash
-cd gtp-stratum
+cd gtp-p4
 ```
 
 ```bash
-p4c -b bmv2 --p4runtime-files gtp-stratum.p4info.txt gtp-stratum.p4
-p4c -b bmv2 --p4runtime-files registertest.p4info.txt registertest.p4
+p4c -b bmv2 --p4runtime-files gtp-p4.p4info.txt gtp-p4.p4
 ```
 
 ```bash
@@ -1304,7 +1299,7 @@ cd
 ```
 
 ```bash
-sudo python3 generatepipe.py gtp-stratum/gtp-stratum.json gtp-stratum/gtp-stratum.p4info.txt
+sudo python3 generatepipe.py gtp-p4/gtp-p4.json gtp-p4/gtp-p4.p4info.txt
 
 sudo python3 generatepipe.py registertest/registertest.json registertest/registertest.p4info.txt
 ```
@@ -1312,7 +1307,7 @@ sudo python3 generatepipe.py registertest/registertest.json registertest/registe
 ## Run the Stratum switch 
 
 ```bash
-sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-config.txt -forwarding_pipeline_configs_file=/home/$USERNAME/pipe.txt -persistent_config_dir=/home/$USERNAME -initial_pipeline=/home/$USERNAME/gtp-stratum/gtp-stratum.json -cpu_port=255 -external_stratum_urls=0.0.0.0:50001 -local_stratum_url=localhost:44400 -max_num_controllers_per_node=10 -write_req_log_file=/home/$USERNAME/write-reqs.txt -logtosyslog=false - -bmv2_log_level=trace logtostderr=true 2>&1 | grep -v "StratumErrorSpace::ERR_UNIMPLEMENTED: DataRequest field loopback_status is not supported yet!"
+sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-config.txt -forwarding_pipeline_configs_file=/home/$USERNAME/pipe.txt -persistent_config_dir=/home/$USERNAME -initial_pipeline=/home/$USERNAME/gtp-p4/gtp-p4.json -cpu_port=255 -external_stratum_urls=0.0.0.0:50001 -local_stratum_url=localhost:44400 -max_num_controllers_per_node=10 -write_req_log_file=/home/$USERNAME/write-reqs.txt -logtosyslog=false - -bmv2_log_level=trace logtostderr=true 2>&1 | grep -v "StratumErrorSpace::ERR_UNIMPLEMENTED: DataRequest field loopback_status is not supported yet!"
 
 
 sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-config.txt -forwarding_pipeline_configs_file=/home/$USERNAME/pipe.txt -persistent_config_dir=/home/$USERNAME -initial_pipeline=/home/$USERNAME/registertest/registertest.json -cpu_port=255 -external_stratum_urls=0.0.0.0:50001 -local_stratum_url=localhost:44400 -max_num_controllers_per_node=10 -write_req_log_file=/home/$USERNAME/write-reqs.txt -logtosyslog=false - -bmv2_log_level=trace logtostderr=true 2>&1 | grep -v "StratumErrorSpace::ERR_UNIMPLEMENTED: DataRequest field loopback_status is not supported yet!"
@@ -1321,8 +1316,8 @@ sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-conf
 
 ```bash
 cd
-cp gtp-stratum/gtp-stratum.json app/src/main/resources
-cp gtp-stratum/gtp-stratum.p4info.txt app/src/main/resources
+cp gtp-p4/gtp-p4.json app/src/main/resources
+cp gtp-p4/gtp-p4.p4info.txt app/src/main/resources
 ```
 
 ```bash
@@ -1596,3 +1591,23 @@ curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H 'Content-Type:
 
 
 
+## COMPILE GTP-P4 program 
+
+```bash
+git clone https://github.com/dpinedaa/GTP-ONOS-P4.git
+```
+
+```bash
+cd GTP-ONOS-P4
+```
+
+```bash
+mv gtp-p4 ~/
+mv generatepipe.py ~/
+mv app ~/
+mv chassis-config.txt ~/
+mv createveth.sh ~/
+mv netcfg.json ~/
+mv libbmpi.so.0.0.0 ~/
+mv libsimpleswitch_runner.so.0.0.0 ~/
+```
