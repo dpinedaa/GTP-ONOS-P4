@@ -86,7 +86,7 @@ sudo ln -s /usr/bin/python3 /usr/bin/python
 ```
 
 ```bash
-wget https://github.com/opennetworkinglab/onos/archive/refs/tags/2.7.0.zip
+wget https://github.com/opennetworkinglab/onos/archive/refs/tags/2.7.0.zip --no-check-certificate
 ```
 
 ```bash
