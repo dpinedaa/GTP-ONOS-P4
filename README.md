@@ -23,9 +23,17 @@ sudo apt install maven -y
 ```
 
 ```bash
-sudo apt update && sudo apt install bazel bazel-3.7.2 -y
+sudo apt update
 ```
 
+```bash
+sudo apt install bazel -y
+```
+
+
+```bash
+sudo apt install bazel-3.7.2 -y
+```
 ## Node js
 
 
