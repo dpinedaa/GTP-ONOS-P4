@@ -245,6 +245,36 @@ sudo apt install p4lang-p4c -y
 
 
 
+### Linux Bridge 
+
+```bash
+sudo apt update
+sudo apt-get install bridge-utils -y
+```
+
+```bash
+sudo brctl addif br0
+```
+
+```bash
+sudo brctl addif br0 veth11
+```
+
+```bash
+sudo ip addr add 192.168.233.1/24 dev br0
+sudo ip link set dev br0 up
+```
+
+
+```bash 
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo iptables -t nat -A POSTROUTING -s 192.168.233.0/24 ! -o enp1s0 -j MASQUERADE
+```
+
+
+
+
+
 
 
 
@@ -594,7 +624,7 @@ You can change the password after login
 
 
 
-## Add user using CLI 
+## Add subscriber using CLI 
 
 ```bash
 mongosh 
@@ -1300,17 +1330,12 @@ cd
 
 ```bash
 sudo python3 generatepipe.py gtp-p4/gtp-p4.json gtp-p4/gtp-p4.p4info.txt
-
-sudo python3 generatepipe.py registertest/registertest.json registertest/registertest.p4info.txt
 ```
 
 ## Run the Stratum switch 
 
 ```bash
 sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-config.txt -forwarding_pipeline_configs_file=/home/$USERNAME/pipe.txt -persistent_config_dir=/home/$USERNAME -initial_pipeline=/home/$USERNAME/gtp-p4/gtp-p4.json -cpu_port=255 -external_stratum_urls=0.0.0.0:50001 -local_stratum_url=localhost:44400 -max_num_controllers_per_node=10 -write_req_log_file=/home/$USERNAME/write-reqs.txt -logtosyslog=false - -bmv2_log_level=trace logtostderr=true 2>&1 | grep -v "StratumErrorSpace::ERR_UNIMPLEMENTED: DataRequest field loopback_status is not supported yet!"
-
-
-sudo stratum_bmv2 -device_id=1 -chassis_config_file=/home/$USERNAME/chassis-config.txt -forwarding_pipeline_configs_file=/home/$USERNAME/pipe.txt -persistent_config_dir=/home/$USERNAME -initial_pipeline=/home/$USERNAME/registertest/registertest.json -cpu_port=255 -external_stratum_urls=0.0.0.0:50001 -local_stratum_url=localhost:44400 -max_num_controllers_per_node=10 -write_req_log_file=/home/$USERNAME/write-reqs.txt -logtosyslog=false - -bmv2_log_level=trace logtostderr=true 2>&1 | grep -v "StratumErrorSpace::ERR_UNIMPLEMENTED: DataRequest field loopback_status is not supported yet!"
 
 ```
 
