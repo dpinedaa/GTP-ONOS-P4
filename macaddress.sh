@@ -55,8 +55,8 @@ for ((i = 1; i <= counter; i++)); do
 done
 
 #BR0 BRIDGE 
-# Search for lines containing "br0" and "brd" using awk
-filtered_output_br=$(echo "$ip_output" | awk '/br0/,/brd/')
+# Search for lines containing "br0:" and "brd" using awk
+filtered_output_br=$(echo "$ip_output" | awk '/br0:/,/brd/')
 
 # Extract interface name and MAC address for BR0
 while read -r line; do
