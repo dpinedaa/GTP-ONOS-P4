@@ -253,7 +253,7 @@ sudo apt-get install bridge-utils -y
 ```
 
 ```bash
-sudo brctl addif br0
+sudo brctl addbr br0
 ```
 
 ```bash
