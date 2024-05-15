@@ -34,6 +34,75 @@ sudo apt install bazel -y
 ```bash
 sudo apt install bazel-3.7.2 -y
 ```
+
+
+
+## INSTALL PROTOBUF
+
+```bash
+sudo apt-get install g++ git bazel
+```
+
+```bash
+cd ~/GTP-ONOS-P4
+cp protoc-3.20.3-linux-x86_64.zip ~/
+cd 
+unzip protoc-3.20.3-linux-x86_64.zip
+sudo mv bin/protoc /usr/local/bin/
+echo $PATH
+export PATH="/usr/local/bin:$PATH"
+```
+
+* Verify protobuf version 
+
+```bash
+protoc --version
+```
+
+```output
+libprotoc 3.20.3
+```
+
+
+
+```bash
+cd protobuf
+```
+
+https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.24.0-3688-ge912bc2e3.zip
+
+```bash
+git checkout tags/v3.24.0-3688-ge912bc2e3
+```
+
+
+
+```bash
+ git clone --branch v3.24.0 --single-branch https://github.com/protocolbuffers/protobuf.git
+```
+
+
+```bash
+git submodule update --init --recursive
+```
+
+```bash
+bazel build :protoc :protobuf
+```
+
+```bash
+sudo cp bazel-bin/protoc /usr/local/bin
+```
+
+```bash
+sudo apt install maven -y 
+```
+
+```bash
+cd
+```
+
+
 ## Node js
 
 
@@ -1301,6 +1370,8 @@ cp libbmpi.so.0.0.0 ~/
 cp libsimpleswitch_runner.so.0.0.0 ~/
 cp netcfg.json ~/
 cp onos-app.sh ~/
+cp generate.sh ~/
+cp macaddress.sh ~/
 ```
 
 ```bash

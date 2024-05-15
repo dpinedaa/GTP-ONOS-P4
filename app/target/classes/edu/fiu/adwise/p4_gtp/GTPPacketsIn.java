@@ -1,4 +1,4 @@
-package edu.fiu.adwise.p4_gtp;
+package us.fiu.adwise.app;
 import org.onlab.packet.Ethernet;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.core.ApplicationId;
@@ -22,14 +22,14 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.model.PiActionParamId;
 import org.onosproject.net.pi.model.PiMatchFieldId;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import static edu.fiu.adwise.p4_gtp.AppConstants.PIPECONF_ID;
+import static us.fiu.adwise.app.AppConstants.PIPECONF_ID;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
-import edu.fiu.adwise.p4_gtp.common.Utils;
+import us.fiu.adwise.app.common.Utils;
 import com.google.common.collect.Lists;
 import java.nio.ByteBuffer;
 import java.util.Arrays; // Import the Arrays class
