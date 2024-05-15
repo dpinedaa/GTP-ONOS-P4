@@ -76,10 +76,11 @@ public class GTPPacketsIn {
 
     @Activate
     public void activate() {
-        appId = coreService.registerApplication("edu.fiu.adwise.create-gtp-flows");
+        appId = coreService.registerApplication("us.fiu.adwise.app");
         packetService.addProcessor(packetProcessor, PacketPriority.REACTIVE.priorityValue());
         TrafficSelector selector = DefaultTrafficSelector.emptySelector();
         packetService.requestPackets(selector, PacketPriority.REACTIVE, appId);
+
         
     }
 

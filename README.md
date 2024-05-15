@@ -39,6 +39,12 @@ sudo apt install bazel-3.7.2 -y
 
 ## INSTALL PROTOBUF
 
+* Clone repo
+
+```bash
+git clone https://github.com/dpinedaa/GTP-ONOS-P4.git
+```
+
 ```bash
 sudo apt-get install g++ git bazel
 ```
@@ -62,46 +68,6 @@ protoc --version
 ```output
 libprotoc 3.20.3
 ```
-
-
-
-```bash
-cd protobuf
-```
-
-https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.24.0-3688-ge912bc2e3.zip
-
-```bash
-git checkout tags/v3.24.0-3688-ge912bc2e3
-```
-
-
-
-```bash
- git clone --branch v3.24.0 --single-branch https://github.com/protocolbuffers/protobuf.git
-```
-
-
-```bash
-git submodule update --init --recursive
-```
-
-```bash
-bazel build :protoc :protobuf
-```
-
-```bash
-sudo cp bazel-bin/protoc /usr/local/bin
-```
-
-```bash
-sudo apt install maven -y 
-```
-
-```bash
-cd
-```
-
 
 ## Node js
 
@@ -1353,10 +1319,7 @@ sudo ./build/nr-ue -c config/open5gs-ue1.yaml
 touch write-reqs.txt
 ```
 
-* Clone the repo  
-
 ```bash
-git clone https://github.com/dpinedaa/GTP-ONOS-P4.git
 cd GTP-ONOS-P4
 ```
 
@@ -1436,8 +1399,8 @@ app activate org.onosproject.netconf
 ```
 
 ```bash
-IP=10.102.211.11
-ArtifactID=p4-gtp-app-1.0-SNAPSHOT
+IP=10.102.196.198
+ArtifactID=app-app-1.0-SNAPSHOT
 
 curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H "Content-Type: application/octet-stream" \
      "http://$IP:8181/onos/v1/applications?activate=true" \
@@ -1446,13 +1409,13 @@ curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H "Content-Type:
 
 **DELETE APP**
 ```bash
-IP=10.102.211.11
-Pipeconf=edu.fiu.adwise.p4_gtp
+IP=10.102.196.198
+Pipeconf=us.fiu.adwise.app
 curl --fail -sSL --user onos:rocks --noproxy localhost -X DELETE "http://$IP:8181/onos/v1/applications/$Pipeconf"
 ```
 
 ```bash
-IP=10.102.211.11
+IP=10.102.196.198
 curl --fail -sSL --user onos:rocks --noproxy localhost -X POST -H 'Content-Type:application/json' \
                 http://$IP:8181/onos/v1/network/configuration -d@./netcfg.json
 ```
